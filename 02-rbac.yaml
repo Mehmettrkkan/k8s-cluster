@@ -1,0 +1,101 @@
+# Junior için 'test' Namespace'inde Tam Yetki Rolü
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role 
+metadata:
+  name: junior-test-full-access
+  namespace: test # Bu rol sadece 'test' odasında geçerli.
+rules:
+- apiGroups: ["", "extensions", "apps"] # "" çekirdek API'yi (pod, servis vb.), diğerleri deployment vb. temsil eder.
+  resources: ["*"] # Hangi kaynaklara erişecek? "*", yani "Tüm kaynaklar" diyoruz.
+  verbs: ["*"] # Hangi işlemleri yapabilir? "*", yani "create, delete, get, list..." hepsi serbest.
+
+---
+# Oluşturduğumuz bu rolü 'junior' grubuna bağlıyoruz (RoleBinding)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding # Rolü alıp, kişiye veya gruba yapıştırdığımız yer.
+metadata:
+  name: junior-test-binding
+  namespace: test
+subjects:
+- kind: Group # Bir kullanıcı (User) yerine bir Gruba (Group) yetki veriyoruz.
+  name: junior # Grubun adı
+  apiGroup: rbac.authorization.k8s.io
+roleRef: # Hangi rolü bağlayacağız?
+  kind: Role
+  name: junior-test-full-access # Yukarıda oluşturduğumuz rolün adı
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Junior için 'production' Namespace'inde Sadece Okuma Rolü
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: junior-prod-read-only
+  namespace: production
+rules:
+- apiGroups: ["", "extensions", "apps"]
+  resources: ["*"]
+  verbs: ["get", "list", "watch"] 
+
+---
+# Bu okuma rolünü 'junior' grubuna bağlıyoruz
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: junior-prod-binding
+  namespace: production
+subjects:
+- kind: Group
+  name: junior
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: junior-prod-read-only
+  apiGroup: rbac.authorization.k8s.io
+
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: senior-test-admin-binding
+  namespace: test
+subjects:
+- kind: Group
+  name: senior
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole # Hazır bir cluster rolünü çekiyoruz.
+  name: admin # K8s'in varsayılan namespace admin rolü.
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: senior-prod-admin-binding
+  namespace: production
+subjects:
+- kind: Group
+  name: senior
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: admin
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding 
+metadata:
+  name: senior-cluster-read-only-binding
+subjects:
+- kind: Group
+  name: senior
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: view # K8s'in varsayılan sadece okuma (read-only) rolü.
+  apiGroup: rbac.authorization.k8s.io
