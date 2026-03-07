@@ -1,0 +1,13 @@
+```text
+# İşletim sistemi kalıntıları
+.DS_Store
+Thumbs.db
+*~
+*.swp
+
+# Minikube veya Kubeconfig yedekleri 
+kubeconfig*
+.kube/
+
+# Log dosyaları
+*.log
