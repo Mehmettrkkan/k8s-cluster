@@ -1,0 +1,55 @@
+# 1. Headless Service (IP'si olmayan, sadece DNS yönlendirmesi yapan servis)
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+  namespace: production
+  labels:
+    app: mongodb
+spec:
+  ports:
+  - port: 27017
+    name: db-port
+  clusterIP: None # İşte bu onu Headless yapar!
+  selector:
+    app: mongodb
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: production
+spec:
+  serviceName: "mongodb-service"
+  replicas: 2 
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      tolerations: # Production node'larında çalışabilmesi için tolerans
+      - key: "ortam"
+        operator: "Equal"
+        value: "production"
+        effect: "NoSchedule"
+      containers:
+      - name: mongodb
+        image: mongo:4.4
+        ports:
+        - containerPort: 27017
+          name: mongodb
+        volumeMounts:
+        - name: mongo-persistent-storage
+          mountPath: /data/db
+  volumeClaimTemplates:
+  - metadata:
+      name: mongo-persistent-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
