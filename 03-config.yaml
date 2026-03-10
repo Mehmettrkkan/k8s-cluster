@@ -5,9 +5,8 @@ metadata:
   namespace: test
 type: Opaque
 data:
-  # Neden Base64 kullanıyoruz?: K8s Secret'ları veriyi düz metin yerine base64 formatında bekler.
-  mysql-root-password: cm9vdHBhc3M= 
-  mysql-password: cm9vdHBhc3M=
+  mysql-root-password: ..
+  mysql-password: ...
 
 ---
 apiVersion: v1
@@ -46,8 +45,8 @@ metadata:
   namespace: production
 type: Opaque
 data:
-  mysql-root-password: cHJvZHBhc3MxMjM=
-  mysql-password: cHJvZHBhc3MxMjM=
+  mysql-root-password: ...
+  mysql-password: ...
 
 ---
 apiVersion: v1
