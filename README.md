@@ -1,5 +1,6 @@
-<img width="2816" height="1536" alt="mimari2" src="https://github.com/user-attachments/assets/e9d0c2a4-ef4a-47e7-beca-365c9dda490b" />
 # Kubernetes Uçtan Uca Cluster Mimarisi 
+
+<img width="2816" height="1536" alt="mimari2" src="https://github.com/user-attachments/assets/e9d0c2a4-ef4a-47e7-beca-365c9dda490b" />
 
 Bu proje, 5 node'lu (1 Master, 4 Worker) bir Kubernetes cluster üzerinde, test ve production ortamlarının izole edildiği, siber güvenlik prensiplerine (RBAC, Least Privilege) uygun ve yüksek erişilebilirliğe (High Availability) sahip bir sistem mimarisi kurulumunu içermektedir.
 
