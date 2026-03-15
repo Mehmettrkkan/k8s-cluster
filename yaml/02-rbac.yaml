@@ -1,6 +1,6 @@
 # Junior için 'test' Namespace'inde Tam Yetki Rolü
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role 
+kind: Role
 metadata:
   name: junior-test-full-access
   namespace: test # Bu rol sadece 'test' odasında geçerli.
@@ -35,7 +35,7 @@ metadata:
 rules:
 - apiGroups: ["", "extensions", "apps"]
   resources: ["*"]
-  verbs: ["get", "list", "watch"] 
+  verbs: ["get", "list", "watch"]
 
 ---
 # Bu okuma rolünü 'junior' grubuna bağlıyoruz
@@ -53,9 +53,7 @@ roleRef:
   name: junior-prod-read-only
   apiGroup: rbac.authorization.k8s.io
 
-
 ---
-
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -86,9 +84,8 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 
 ---
-
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding 
+kind: ClusterRoleBinding
 metadata:
   name: senior-cluster-read-only-binding
 subjects:

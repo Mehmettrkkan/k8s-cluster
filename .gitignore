@@ -11,3 +11,13 @@ kubeconfig*
 
 # Log dosyaları
 *.log
+
+# Terraform dosyaları
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+
+# İşletim sistemi kalıntıları
+.DS_Store

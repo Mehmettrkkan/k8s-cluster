@@ -41,6 +41,8 @@ spec:
             cpu: "500m"
         env:
         # Şifreleri gizlediğimiz Secret'tan çekiyoruz
+        - name: WORDPRESS_DB_USER
+          value: root
         - name: MYSQL_ROOT_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -95,6 +97,8 @@ spec:
             memory: "512Mi"
             cpu: "500m"
         env:
+        - name: WORDPRESS_DB_USER
+          value: root
         - name: WORDPRESS_DB_HOST
           value: mysql-service:3306
         - name: WORDPRESS_DB_PASSWORD
