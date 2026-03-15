@@ -1,96 +1,86 @@
-# Local Kubernetes GitOps Monorepo
+# Local Kubernetes Infrastructure & Configuration Management (PoC)
 
-Bu proje, yerel bir ortamda (Localhost) tam kapsamlı bir DevOps ve Platform Mühendisliği altyapısının "Infrastructure as Code" (IaC) ve "Configuration Management" prensipleriyle nasıl inşa edileceğini gösteren bir konsept kanıtıdır (PoC).
+Bu proje, yerel bir ortamda (Localhost) Kubernetes cluster altyapısının kod olarak (IaC) ayağa kaldırılmasını ve üzerindeki servislerin yapılandırma yönetimi (Configuration Management) prensipleriyle yönetilmesini sağlayan bir DevOps konsept kanıtıdır (PoC).
 
-Altyapı provizyonu, Kubernetes konfigürasyon yönetimi ve CI/CD süreçleri tek bir monorepo üzerinden yönetilmektedir. Amaç, manuel müdahaleleri sıfıra indirerek donanım üzerinde saniyeler içinde ayağa kalkabilen, "Production-Ready" standartlarında bir test laboratuvarı oluşturmaktır.
+Projede altyapı provizyonu, Kubernetes kaynak yönetimi ve manifestolar düzenli bir monorepo hiyerarşisi içerisinde tutulmaktadır. Amaç, imperatif (emredici) manuel müdahaleleri ve bash betiklerini tamamen terk ederek, donanım üzerinde saniyeler içinde "Production-Ready" standartlarında deklaratif bir test laboratuvarı oluşturmaktır.
 
-## 🏗️ Mimari ve İş Akışı (Architecture)
+## 🏗️ Mimari ve İş Akışı
 
-Aşağıdaki diyagram, kodun repository'ye gönderilmesinden uygulamanın cluster üzerinde ayağa kalkmasına kadar olan tam otomatik CI/CD sürecini göstermektedir:
+Sistem, altyapının sıfırdan var edilmesi ve konfigürasyonların uygulanması olmak üzere iki ana katmandan oluşmaktadır. Imperatif script'ler yerine tam idempotent (tekrarlanabilir) bir otomasyon akışı benimsenmiştir.
 
 ```mermaid
 graph TD
-    subgraph "GitHub Cloud"
-        A[Geliştirici Code Push] -->|Tetikler| B(GitHub Actions)
-    end
-
-    subgraph "Local Bare-Metal Server (Linux)"
-        B -.->|İş Emri| C[Self-Hosted Runner]
+    subgraph "Host Machine (Bare-Metal)"
+        A[DevOps Engineer] -->|1. Altyapı Talebi| B[Terraform]
         
-        subgraph "1. Infrastructure Layer (Terraform)"
-            C -->|terraform apply| D[Terraform State]
-            D -->|Provizyonlar| E[(Kind K8s Cluster)]
-            E --- E1[Control Plane]
-            E --- E2[Worker Node 1]
-            E --- E3[Worker Node 2]
+        subgraph "Infrastructure Layer"
+            B -->|Provizyonlar| C[(Kind K8s Cluster)]
+            C --- C1[Control Plane]
+            C --- C2[Worker Node 1]
+            C --- C3[Worker Node 2]
         end
 
-        subgraph "2. Configuration Layer (Ansible)"
-            C -->|ansible-playbook| F[Ansible Core]
-            F -->|K8s API İstekleri| E
-            F -->|Deploy| G[Nginx Deployment]
+        A -->|2. Konfigürasyon Talebi| D[Ansible Core]
+        
+        subgraph "Configuration Layer"
+            D -->|K8s API İstekleri| C
+            D -->|State Kontrolü & Uygulama| E[Namespace, Deployment, RBAC]
         end
     end
 
     classDef default fill:#282a36,stroke:#6272a4,stroke-width:2px,color:#f8f8f2;
-    classDef github fill:#181717,stroke:#ffffff,color:#fff;
-    classDef runner fill:#ffb86c,stroke:#ff79c6,color:#282a36;
-    class A,B github;
-    class C runner;
+    classDef user fill:#ffb86c,stroke:#ff79c6,color:#282a36;
+    class A user;
 ```
 
-## 🧠 Teknoloji Kararları ve Yaklaşımlar (Architecture Decisions)
+## 🧠 Teknoloji Kararları ve Yaklaşımlar
 
-Bu projede kullanılan teknolojiler rastgele seçilmemiş, modern DevOps prensiplerine (Declarative & Idempotent) sadık kalınarak tasarlanmıştır.
+* **Terraform ile Altyapı Yönetimi (IaC):** Kubernetes cluster'ını manuel kurmak yerine `tehcyx/kind` provider'ı kullanılmıştır. Bu yaklaşım, cluster mimarisinin (1 Control Plane, 2 Worker Node vb.) bir 'state' dosyası üzerinden izlenmesini ve ihtiyaç anında tüm altyapının sistem kaynaklarından temiz bir şekilde silinmesini (`destroy`) sağlar.
+* **Ansible ile Deklaratif Otomasyon:** `kubectl apply` komutlarını körlemesine çalıştıran legacy bash script'leri (`deploy.sh`) yerine, K8s kaynaklarının yönetimi için Ansible'ın idempotent yapısına geçilmiştir. Böylece sistemde sadece istenen durumdan (desired state) sapmalar olduğunda değişiklik yapılır, API yorulmaz ve hata yönetimi kusursuzlaştırılır.
+* **Modüler Manifest Yapısı:** İleri düzey K8s objeleri (RBAC, Ingress, StatefulSet, Probes vb.) ayrıştırılmış bir klasör mimarisinde (`yaml/`) tutularak sistemin okunabilirliği maksimum seviyeye çıkarılmıştır. Bu dosyalar zamanla Ansible playbook'larına entegre edilebilecek referans niteliği taşır.
 
-* **Terraform ile Altyapı Yönetimi (IaC):** Kubernetes cluster'ını manuel komutlarla kurmak yerine Terraform kullanılmıştır. Altyapının durumu kontrol altında tutulur ve ihtiyaç kalmadığında `terraform destroy` komutu ile geride hiçbir zombi process bırakmadan kaynaklar tamamen temizlenir.
-* **Ansible ile K8s Konfigürasyon Yönetimi:** Manifest dosyalarını manuel uygulamak yerine, Ansible'ın "Idempotent" (tekrarlanabilir) doğasından faydalanılmıştır. Playbook defalarca çalıştırılsa bile, cluster'da bir değişiklik yoksa sistem yorulmaz, sadece farklılıklar düzeltilir.
-* **GitHub Actions (Self-Hosted Runner):** GitHub bulut sunucularının yerel ağımıza dışarıdan erişimi olmadığı için, Runner doğrudan yerel makinede çalıştırılmış ve güvenli bir GitOps köprüsü kurulmuştur.
+## 📂 Klasör Yapısı ve Modüller
 
-## 📂 Klasör Yapısı (Monorepo)
-
-Proje, konfigürasyon ve altyapı kodlarının ayrıştırıldığı düzenli bir Monorepo yapısındadır:
+Proje, sorumlulukların net bir şekilde ayrıldığı şu hiyerarşiyi kullanır:
 
 ```text
 k8s-cluster/
-├── .github/
-│   └── workflows/
-│       └── ci-cd.yml          # GitHub Actions pipeline tanımı
 ├── infrastructure/
 │   ├── ansible/
-│   │   └── k8s-kurulum.yml    # Namespace, Deployment vb. K8s kaynakları
+│   │   └── k8s-kurulum.yml    # Ansible ile temel K8s objelerinin deklaratif kurulumu
 │   └── terraform/
-│       ├── main.tf            # Cluster mimarisi ve node tanımları
-│       └── .gitignore         # State ve hassas verilerin izolasyonu
-├── k8s-manifests/             # Legacy manuel referans YAML dosyaları
+│       ├── main.tf            # Cluster donanım/node mimarisinin Terraform tanımı
+│       └── terraform.tfstate  # Altyapının mevcut durumunu tutan lokal state dosyası
+├── yaml/                      # Detaylı Kubernetes manifestoları (Legacy/Referans)
+│   ├── 01-namespaces.yaml
+│   ├── 02-rbac.yaml           # Rol ve yetkilendirme (Role-Based Access Control)
+│   ├── 03-config.yaml         # ConfigMap ve Secret tanımları
+│   ├── 04-deployments.yaml
+│   ├── 05-ingress.yaml        # Dış dünya trafik yönlendirmesi
+│   ├── 06-probes-lb.yaml      # Health-check (Liveness/Readiness) ve LoadBalancer
+│   ├── 07-daemonset.yaml      # Her node'da çalışması gereken servisler
+│   ├── 08-statefulset.yaml    # Kalıcı veri gerektiren (Stateful) uygulamalar
+│   └── 09-service-account.yaml
 └── README.md
 ```
 
-## 🚀 Kurulum ve Çalıştırma
+## 🚀 Dağıtım (Deployment) Süreçleri
 
-### Ön Koşullar
-* Docker Daemon
-* Terraform (v1.0+)
-* Ansible & `python-kubernetes`
-* Kind (Kubernetes in Docker)
-* GitHub Actions Self-Hosted Runner 
+Sistemin kurulumu, otomasyon araçlarının sırayla tetiklenmesi mantığına dayanır.
 
-### 1. Altyapıyı Başlatma (Provisioning)
-```bash
-cd infrastructure/terraform
-terraform init
-terraform apply -auto-approve
-```
+**1. Altyapının Ayağa Kaldırılması:**
+İlk aşamada Terraform ile donanım provizyonu sağlanır. Bu işlem, Docker üzerinde sanal node'ları oluşturur ve Kubernetes API'sini hazır hale getirir.
+* *Çalışma Dizini:* `infrastructure/terraform`
+* *Süreç:* Başlatma (`terraform init`) ve uygulama (`terraform apply -auto-approve`).
 
-### 2. Sürekli Dağıtım (CI/CD Pipeline)
-Repository'nin `main` branch'ine yapılan her Git Push işlemi pipeline'ı otomatik tetikler. Manuel tetikleme için:
-```bash
-cd infrastructure/ansible
-ansible-playbook k8s-kurulum.yml
-```
+**2. Konfigürasyonların Uygulanması:**
+Cluster hazır olduktan sonra, Ansible devreye girerek K8s objelerini ve uygulamaları cluster içerisine enjekte eder. Ansible'ın yapısı gereği bu işlem defalarca güvenle tekrarlanabilir.
+* *Çalışma Dizini:* `infrastructure/ansible`
+* *Süreç:* Playbook'un çalıştırılması (`ansible-playbook k8s-kurulum.yml`).
 
-### 3. Kaynakların Temizlenmesi (Tear Down)
-Çalışma bittiğinde sistem kaynaklarını (RAM/CPU) tamamen boşa çıkarmak için:
+## 🧹 Kaynak Yönetimi ve Temizlik
+
+Test senaryoları tamamlandığında, host makinenin sistem kaynaklarını (RAM/CPU) tamamen serbest bırakmak için Terraform'un yok etme özelliği kullanılır. Bu işlem K8s node'larını ardında zombi process bırakmadan imha eder:
 ```bash
 cd infrastructure/terraform
 terraform destroy -auto-approve
