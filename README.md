@@ -1,12 +1,13 @@
+Markdown
 # Local Kubernetes GitOps Monorepo
 
 Bu proje, yerel bir ortamda (Localhost) tam kapsamlı bir DevOps ve Platform Mühendisliği altyapısının "Infrastructure as Code" (IaC) ve "Configuration Management" prensipleriyle nasıl inşa edileceğini gösteren bir konsept kanıtıdır (PoC).
 
-Altyapı provizyonu, K8s konfigürasyon yönetimi ve CI/CD süreçleri tek bir monorepo üzerinden yönetilmektedir.
+Altyapı provizyonu, Kubernetes konfigürasyon yönetimi ve CI/CD süreçleri tek bir monorepo üzerinden yönetilmektedir. Amaç, manuel müdahaleleri sıfıra indirerek donanım üzerinde saniyeler içinde ayağa kalkabilen, "Production-Ready" standartlarında bir test laboratuvarı oluşturmaktır.
 
 ## 🏗️ Mimari ve İş Akışı (Architecture)
 
-Aşağıdaki diyagram, kodun yazılmasından uygulamanın cluster üzerinde ayağa kalkmasına kadar olan otomatik CI/CD sürecini göstermektedir:
+Aşağıdaki diyagram, kodun repository'ye gönderilmesinden uygulamanın cluster üzerinde ayağa kalkmasına kadar olan tam otomatik CI/CD sürecini göstermektedir:
 
 ```mermaid
 graph TD
@@ -14,19 +15,19 @@ graph TD
         A[Geliştirici Code Push] -->|Tetikler| B(GitHub Actions)
     end
 
-    subgraph "Local Bare-Metal Server (CachyOS)"
+    subgraph "Local Bare-Metal Server (Linux)"
         B -.->|İş Emri| C[Self-Hosted Runner]
         
-        subgraph "Infrastructure Layer"
-            C -->|1. IaC| D[Terraform]
+        subgraph "1. Infrastructure Layer (Terraform)"
+            C -->|terraform apply| D[Terraform State]
             D -->|Provizyonlar| E[(Kind K8s Cluster)]
             E --- E1[Control Plane]
             E --- E2[Worker Node 1]
             E --- E3[Worker Node 2]
         end
 
-        subgraph "Configuration & App Layer"
-            C -->|2. Config| F[Ansible]
+        subgraph "2. Configuration Layer (Ansible)"
+            C -->|ansible-playbook| F[Ansible Core]
             F -->|K8s API İstekleri| E
             F -->|Deploy| G[Nginx Deployment]
         end
@@ -37,3 +38,39 @@ graph TD
     classDef runner fill:#ffb86c,stroke:#ff79c6,color:#282a36;
     class A,B github;
     class C runner;
+🧠 Teknoloji Kararları ve Yaklaşımlar (Architecture Decisions)
+Bu projede kullanılan teknolojiler rastgele seçilmemiş, modern DevOps prensiplerine (Declarative & Idempotent) sadık kalınarak tasarlanmıştır.
+
+Terraform ile Altyapı Yönetimi (IaC): Kubernetes cluster'ını manuel komutlarla kurmak yerine Terraform kullanılmıştır. Altyapının durumu kontrol altında tutulur ve ihtiyaç kalmadığında terraform destroy komutu ile geride hiçbir zombi process bırakmadan kaynaklar tamamen temizlenir.
+
+Ansible ile K8s Konfigürasyon Yönetimi: Manifest dosyalarını manuel uygulamak yerine, Ansible'ın "Idempotent" (tekrarlanabilir) doğasından faydalanılmıştır. Playbook defalarca çalıştırılsa bile, cluster'da bir değişiklik yoksa sistem yorulmaz, sadece farklılıklar düzeltilir.
+
+GitHub Actions (Self-Hosted Runner): GitHub bulut sunucularının yerel ağımıza dışarıdan erişimi olmadığı için, Runner doğrudan yerel makinede çalıştırılmış ve güvenli bir GitOps köprüsü kurulmuştur.
+
+📂 Klasör Yapısı (Monorepo)
+Proje, konfigürasyon ve altyapı kodlarının ayrıştırıldığı düzenli bir Monorepo yapısındadır:
+
+Plaintext
+k8s-cluster/
+├── .github/
+│   └── workflows/
+│       └── ci-cd.yml          # GitHub Actions pipeline tanımı
+├── infrastructure/
+│   ├── ansible/
+│   │   └── k8s-kurulum.yml    # Namespace, Deployment vb. K8s kaynakları
+│   └── terraform/
+│       ├── main.tf            # Cluster mimarisi ve node tanımları
+│       └── .gitignore         # State ve hassas verilerin izolasyonu
+├── k8s-manifests/             # Legacy manuel referans YAML dosyaları
+└── README.md
+🚀 Kurulum ve Çalıştırma
+Ön Koşullar
+Docker Daemon
+
+Terraform (v1.0+)
+
+Ansible & python-kubernetes
+
+Kind (Kubernetes in Docker)
+
+GitHub Actions Self-Hosted Runner
