@@ -1,0 +1,36 @@
+---
+- name: Kubernetes Cluster Yapilandirmasi
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: 1. Adim - Ozel bir Namespace olustur
+      kubernetes.core.k8s:
+        name: devops-uzayi
+        api_version: v1
+        kind: Namespace
+        state: present
+
+    - name: 2. Adim - Nginx Deployment (2 Replikali) ayaga kaldir
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: nginx-app
+            namespace: devops-uzayi
+          spec:
+            replicas: 2
+            selector:
+              matchLabels:
+                app: my-nginx
+            template:
+              metadata:
+                labels:
+                  app: my-nginx
+              spec:
+                containers:
+                - name: web-sunucu
+                  image: nginx:latest
+                  ports:
+                  - containerPort: 80
