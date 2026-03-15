@@ -1,20 +1,17 @@
-name: K8s Yerel CI/CD
+name: K8s Yerel CI-CD
 
-# Bu pipeline ne zaman çalışacak? main branch'ine push yapıldığında.
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-  altyapiyi_guncelle:.
+  altyapiyi_guncelle:
     runs-on: self-hosted
-    
     steps:
-      #  Kodları GitHub'dan bilgisayara (runner'ın içine) çek
       - name: Repoyu Klonla
         uses: actions/checkout@v4
 
-      # Ansible komutumuzu çalıştır
       - name: Ansible ile K8s Kurulumunu Tetikle
         run: |
           echo "Ansible playbook basliyor..."
